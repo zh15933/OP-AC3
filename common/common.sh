@@ -692,7 +692,7 @@ if [[ "${Gateway_Settings}" == "0" ]] || [[ -z "${Gateway_Settings}" ]]; then
 elif [[ -n "${Gateway_Settings}" ]]; then
   Router_gat="$(echo ${Gateway_Settings} |grep -Eo "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")"
   if [[ -n "${Router_gat}" ]]; then
-    sed -i "$lan\set network.lan.gateway='${Gateway_Settings}'" "${GENE_PATH}"
+    sed -i "/network.lan.ipaddr/a \\\tset network.lan.gateway='${Gateway_Settings}'" "${GENE_PATH}"
     echo "网关[${Gateway_Settings}]修改完成"
   else
     TIME r "因子网关IP获取有错误，网关IP设置失败，请检查IP是否填写正确，如果填写正确，那就是获取不了源码内的IP了"
@@ -704,7 +704,10 @@ if [[ "${DNS_Settings}" == "0" ]] || [[ -z "${DNS_Settings}" ]]; then
 elif [[ -n "${DNS_Settings}" ]]; then
   ipa_dns="$(echo ${DNS_Settings} |grep -Eo "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")"
   if [[ -n "${ipa_dns}" ]]; then
-     sed -i "$lan\set network.lan.dns='${DNS_Settings}'" "${GENE_PATH}"
+     # 遍历传入的每个 DNS（按空格切分），使用 add_list 语法写入
+     for dns in ${DNS_Settings}; do
+       sed -i "/network.lan.ipaddr/a \\\tadd_list network.lan.dns='${dns}'" "${GENE_PATH}"
+     done
      echo "DNS[${DNS_Settings}]设置完成"
   else
     TIME r "因DNS获取有错误，DNS设置失败，请检查DNS是否填写正确"
@@ -716,7 +719,7 @@ if [[ "${Broadcast_Ipv4}" == "0" ]] || [[ -z "${Broadcast_Ipv4}" ]]; then
 elif [[ -n "${Broadcast_Ipv4}" ]]; then
   IPv4_Bro="$(echo ${Broadcast_Ipv4} |grep -Eo "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")"
   if [[ -n "${IPv4_Bro}" ]]; then
-    sed -i "$lan\set network.lan.broadcast='${Broadcast_Ipv4}'" "${GENE_PATH}"
+    sed -i "/network.lan.ipaddr/a \\\tset network.lan.broadcast='${Broadcast_Ipv4}'" "${GENE_PATH}"
     echo "广播IP[${Broadcast_Ipv4}]设置完成"
   else
     TIME r "因IPv4 广播IP获取有错误，IPv4广播IP设置失败，请检查IPv4广播IP是否填写正确"
@@ -724,22 +727,39 @@ elif [[ -n "${Broadcast_Ipv4}" ]]; then
 fi
 
 if [[ "${Disable_DHCP}" == "1" ]]; then
-   sed -i "$lan\set dhcp.lan.ignore='1'" "${GENE_PATH}"
+   sed -i "/network.lan.ipaddr/a \\\tset dhcp.lan.ignore='1'" "${GENE_PATH}"
    echo "关闭DHCP设置完成"
 else
    echo "不进行,关闭DHCP设置"
 fi
 
 if [[ "${Disable_Bridge}" == "1" ]]; then
-   sed -i "$lan\delete network.lan.type" "${GENE_PATH}"
+   sed -i "/network.lan.type='bridge'/d" "${GENE_PATH}" 2>/dev/null
    echo "去掉桥接设置完成"
 else
-   echo "不进行,去掉桥接设"
+   echo "不进行,去掉桥接设置"
 fi
 
 if [[ "${Ttyd_account_free_login}" == "1" ]]; then
-   sed -i "$lan\set ttyd.@ttyd[0].command='/bin/login -f root'" "${GENE_PATH}"
-   echo "TTYD免账户登录完成"
+   # 仅在 package/ 目录及其子目录（含 package/feeds/）中自动定位 ttyd 配置文件
+   TTYD_CONF=$(find package/ -path "*/etc/config/ttyd" -type f 2>/dev/null | head -n 1)
+
+   if [ -n "$TTYD_CONF" ] && [ -f "$TTYD_CONF" ]; then
+      # 找到目标文件，直接修改 option command 为免密登录
+      sed -i "s?option command.*?option command '/bin/login -f root'?g" "$TTYD_CONF"
+      echo "TTYD免账户登录设置完成（配置文件：$TTYD_CONF）"
+   else
+      # 兜底方案：写入 uci-defaults 首次开机脚本
+      mkdir -p package/base-files/files/etc/uci-defaults
+      cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-custom-ttyd
+#!/bin/sh
+uci set ttyd.@ttyd[0].command='/bin/login -f root' 2>/dev/null
+uci commit ttyd 2>/dev/null
+exit 0
+EOF
+      chmod +x package/base-files/files/etc/uci-defaults/99-custom-ttyd
+      echo "TTYD免账户登录(uci-defaults)设置完成"
+   fi
 else
    echo "不进行,TTYD免账户登录"
 fi
