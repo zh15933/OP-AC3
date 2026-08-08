@@ -100,8 +100,8 @@ echo "==============================================="
 echo "🛠️  步骤 1: 清理并重新拉取插件仓库"
 echo "==============================================="
 # 删除旧目录
-# rm -rf feeds/datout/luci-app-nikki/
-# echo "🗑️  已清理旧目录"
+rm -rf feeds/datout/luci-app-nikki/
+echo "🗑️  已清理旧目录"
 
 # 重新拉取仓库
 git clone https://github.com/nikkinikki-org/openwrt-nikki.git feeds/datout/luci-app-nikki
