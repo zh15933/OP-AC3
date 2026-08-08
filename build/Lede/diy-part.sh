@@ -95,18 +95,17 @@ git clone --depth=1 https://github.com/yingziwu/openwrt-fakehttp package/custom/
 git clone --depth=1 https://github.com/yingziwu/luci-app-fakehttp package/custom/luci-app-fakehttp \
   || { echo "ERROR: clone luci-app-fakehttp failed"; exit 1; }
 
+echo ""
 echo "==============================================="
-echo "🔍 步骤 1: 更新 Nikki 源码"
+echo "🛠️  步骤 1: 清理并重新拉取插件仓库"
 echo "==============================================="
+# 删除旧目录
+# rm -rf feeds/datout/luci-app-nikki/
+# echo "🗑️  已清理旧目录"
 
-# 删除旧版并克隆
-git clone https://github.com/nikkinikki-org/OpenWrt-nikki.git feeds/xhh/luci-app-nikki
-
-if [ $? -eq 0 ]; then
-    echo "✅ 源码拉取成功"
-else
-    echo "❌ 源码拉取失败，请检查网络" && exit 1
-fi
+# 重新拉取仓库
+git clone https://github.com/nikkinikki-org/openwrt-nikki.git feeds/datout/luci-app-nikki
+echo "🚚 仓库已重新克隆至 feeds/danshui/luci-app-nikki"
 
 echo ""
 echo "==============================================="
@@ -114,27 +113,30 @@ echo "🛠️  步骤 2: 移除 面板API 随机密码逻辑"
 echo "==============================================="
 
 # 定义目标文件路径
-NIKKI_INIT="feeds/xhh/luci-app-nikki/nikki/files/uci-defaults/init.sh"
+NIKKI_INIT="feeds/datout/luci-app-nikki/nikki/files/uci-defaults/init.sh"
 
 if [ -f "$NIKKI_INIT" ]; then
     echo "🎯 找到目标文件: $NIKKI_INIT"
     
-    # 执行替换：将 random=$(...) 替换为 random=""
-    # 这样编译出的固件默认 api_secret 就会为空，方便直接登录
+    # 执行替换：将生成随机数的逻辑直接改为置空
+    # 这里使用了前面定义的变量 $NIKKI_INIT，确保路径一致
     sed -i 's/random=\$(awk.*)/random=""/g' "$NIKKI_INIT"
     
-    # 验证修改
+    # 验证修改：检查文件中是否成功出现了 random=""
     CHECK_RESULT=$(grep "random=\"" "$NIKKI_INIT")
     if [ -n "$CHECK_RESULT" ]; then
-        echo "✨ 代码修改成功！当前配置为: $CHECK_RESULT"
-        echo "💡 提示：固件安装后 api_secret 将为空。"
+        echo "✨ 代码修改成功！"
+        echo "📝 修改后的行内容: $CHECK_RESULT"
+        echo "💡 提示：固件安装后 api_secret 将为空，登录面板直接点确定即可。"
     else
-        echo "⚠️  警告：sed 替换可能未生效，请手动核对文件内容。"
+        echo "⚠️  警告：sed 替换可能未生效，请检查 init.sh 中的原始代码格式。"
     fi
 else
-    echo "❌ 错误：未找到目标文件！请确认插件路径是否正确。"
+    echo "❌ 错误：未找到目标文件 $NIKKI_INIT"
+    echo "请检查 git clone 是否成功，或者仓库内部目录结构是否变动。"
 fi
 echo "==============================================="
+
 
 
 # 修改插件名字
