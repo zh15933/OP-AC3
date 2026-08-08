@@ -114,7 +114,7 @@ echo "🛠️  步骤 2: 移除 面板API 随机密码逻辑"
 echo "==============================================="
 
 # 定义目标文件路径
-NIKKI_INIT="feeds/danshui/luci-app-nikki/nikki/files/uci-defaults/init.sh"
+NIKKI_INIT="feeds/xhh/luci-app-nikki/nikki/files/uci-defaults/init.sh"
 
 if [ -f "$NIKKI_INIT" ]; then
     echo "🎯 找到目标文件: $NIKKI_INIT"
