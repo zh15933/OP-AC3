@@ -128,18 +128,21 @@ jobs:
 
         mkdir -p tmp/aria2c
 
-        # 固定 server-stat 文件：让 aria2 在本次 job 内持续积累“哪个镜像更快”
+        # 优化 aria2 参数：降低超时与重试次数，改用 inorder 优先切镜像
         export ARIA2C_OPTIONS="\
-          --connect-timeout=20 --timeout=20 --max-tries=20 --retry-wait=3 \
-          --lowest-speed-limit=200K \
-          --uri-selector=adaptive \
+          --connect-timeout=10 \
+          --timeout=15 \
+          --max-tries=3 \
+          --retry-wait=2 \
+          --lowest-speed-limit=100K \
+          --uri-selector=inorder \
           --server-stat-of=$PWD/tmp/aria2c/serverstat \
           --server-stat-if=$PWD/tmp/aria2c/serverstat \
           --server-stat-timeout=86400 \
         "
 
-        # 用 CONFIG_DOWNLOAD_TOOL_CUSTOM 确保 make 不把 DOWNLOAD_TOOL_CUSTOM 覆盖回去
-        make download -j4 V=s CONFIG_DOWNLOAD_TOOL_CUSTOM=aria2c
+        # 优先使用 aria2 多线程下载，遇到失败自动降级为单线程原生重试
+        make download -j8 CONFIG_DOWNLOAD_TOOL_CUSTOM=aria2c || make download -j1 V=s
 
     - name: 开始编译固件
       id: compile
