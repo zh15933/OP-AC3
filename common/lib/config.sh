@@ -41,14 +41,14 @@ fi
 #   2) fallback: clone sbwml/packages_lang_golang (26.x)
 # ----------------------------------------------------------
 if [[ "${SOURCE_CODE}" == "IMMORTALWRT" ]] && [[ "${REPO_BRANCH}" != "master" ]] && [[ "${REPO_BRANCH}" =~ (23\.05|24\.10|2410) ]]; then
-  TIME y "ImmortalWrt ${REPO_BRANCH}: 强制使用 Go 1.26（兼容 xray-core 等 go>=1.25）"
+  TIME y "ImmortalWrt ${REPO_BRANCH}: 强制使用 Go 1.27（兼容 xray-core 等 go>=1.25）"
   if [[ -d "${HOME_PATH}/feeds/datout/packages_lang_golang/golang" ]]; then
     rm -rf "${HOME_PATH}/feeds/packages/lang/golang"
     mkdir -p "${HOME_PATH}/feeds/packages/lang/golang"
     cp -a "${HOME_PATH}/feeds/datout/packages_lang_golang/." "${HOME_PATH}/feeds/packages/lang/golang/"
   else
     rm -rf "${HOME_PATH}/feeds/packages/lang/golang"
-    git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 26.x "${HOME_PATH}/feeds/packages/lang/golang"
+    git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 27.x "${HOME_PATH}/feeds/packages/lang/golang"
   fi
 
   # Clear old host go artifacts/caches to avoid still using previous toolchain
