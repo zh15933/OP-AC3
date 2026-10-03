@@ -7,19 +7,17 @@ function Diy_partsh() {
   cd ${HOME_PATH}
   
   # ----------------------------------------------------------
-  # 🚀 必须在 ./scripts/feeds update 之前执行，
-  # 确保 feeds 系统能识别并基于 Go 27.x 建立正确的依赖索引
+  # 🚀 强制直接从 sbwml 克隆 Go 27.x 分支，绕过本地 datout 缓存干扰
   # ----------------------------------------------------------
   if [[ "${SOURCE_CODE}" == "IMMORTALWRT" ]] && [[ "${REPO_BRANCH}" != "master" ]] && [[ "${REPO_BRANCH}" =~ (23\.05|24\.10|2410) ]]; then
     TIME y "ImmortalWrt ${REPO_BRANCH}: 强制使用 Go 1.27（兼容 xray-core 等 go>=1.25）"
-    if [[ -d "${HOME_PATH}/feeds/datout/packages_lang_golang/golang" ]]; then
-      rm -rf "${HOME_PATH}/feeds/packages/lang/golang"
-      mkdir -p "${HOME_PATH}/feeds/packages/lang/golang"
-      cp -a "${HOME_PATH}/feeds/datout/packages_lang_golang/." "${HOME_PATH}/feeds/packages/lang/golang/"
-    else
-      rm -rf "${HOME_PATH}/feeds/packages/lang/golang"
-      git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 27.x "${HOME_PATH}/feeds/packages/lang/golang"
-    fi
+    
+    # 彻底清理旧的 golang 目录及可能存在的 datout 旧缓存
+    rm -rf "${HOME_PATH}/feeds/packages/lang/golang"
+    rm -rf "${HOME_PATH}/feeds/datout/packages_lang_golang"
+    
+    # 直接强制克隆 sbwml 最新的 27.x 分支
+    git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 27.x "${HOME_PATH}/feeds/packages/lang/golang"
 
     # 清理旧的主机 go 编译缓存，防止残留
     rm -rf "${HOME_PATH}/staging_dir/hostpkg/stamp/.golang"* \
