@@ -41,4 +41,4 @@ jobs:
           echo "🚀 本次共计删除记录数: $count"
           echo "==============================================="
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
