@@ -1,13 +1,3 @@
-#
-#
-# 因为SSH连接配置固件直接编译，会给github停止编译的,所以要另外触发启动编译程序
-#
-# 一般情况下都能触发启动编译的，除非没设置好密匙，或者密匙过期了，或者密匙错误之类的
-#
-# REPO_TOKEN密匙制作教程：https://git.io/jm.md
-#
-#
-
 name: Immortalwrt-源码
 on:
   workflow_dispatch:
@@ -73,9 +63,6 @@ on:
         default: 'true'
         type: boolean
 
-
-# 如若启动定时编译的话,配置文件是设置对应文件夹内的settings.ini文件
-# 定时触发开启开始编译(把下面两个#去掉开启,时间设置请看定时开启编译说明)
   schedule:
    - cron: 0 8 */6 * *
 
@@ -91,10 +78,14 @@ env:
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
   TZ: Asia/Shanghai
   DIY_WORK: workdir
+  # 为定时编译设置默认回退变量（当 inputs 为空时生效）
+  REPO_BRANCH: ${{ inputs.REPO_BRANCH || 'openwrt-24.10' }}
+  CONFIG_FILE: ${{ inputs.CONFIG_FILE || 'x86_64' }}
+  SSH_ACTION: ${{ inputs.SSH_ACTION || 'false' }}
 
 jobs:
   build:
-    name: 启动"${{ matrix.target }}-${{ github.event.inputs.REPO_BRANCH }}"触发编译
+    name: 启动"${{ matrix.target }}-${{ inputs.REPO_BRANCH || 'openwrt-24.10' }}"触发编译
     runs-on: ubuntu-22.04
     if: ${{ github.event.repository.owner.id == github.event.sender.id }}
     
@@ -104,8 +95,6 @@ jobs:
       fail-fast: false
       matrix:
         target: [Immortalwrt]
-        
-        # 请勿对 target: [Immortalwrt] 做任何修改
         
     steps:
     - name: 检出自动化仓库
@@ -129,7 +118,6 @@ jobs:
         fi
         UP_VER="$(git show "upstream/${UPSTREAM_BRANCH}:${VER_FILE}" 2>/dev/null | tr -d '\r\n' || true)"
         
-        # If versions match, allow build even if there are doc-only commits ahead.
         if [ -n "${LOCAL_VER}" ] && [ -n "${UP_VER}" ] && [ "${LOCAL_VER}" = "${UP_VER}" ]; then
           exit 0
         fi
@@ -138,6 +126,7 @@ jobs:
         echo "::error title=需要先同步上游::你的仓库落后 ${UPSTREAM_REPO} (behind=${behind})。请先到 Actions 运行【Sync upstream】同步后再重跑本流程。"
         echo "::notice title=路径::Actions → Sync upstream → Run workflow（如看不到该流程：先用 GitHub 的 Sync fork 同步一次）"
         exit 1
+
     - name: 检测密钥 / 文件 / 版本
       uses: ./.github/actions/mishi
 
@@ -166,7 +155,7 @@ jobs:
         sudo install -d -m 0755 -o "${USER}" -g "$(id -gn)" "${WORK_ROOT}"
         echo "配置工作目录已准备：${WORK_ROOT}"
 
-    - name: 下载 ${{ matrix.target }}-${{ inputs.REPO_BRANCH }} 源码
+    - name: 下载 ${{ matrix.target }}-${{ env.REPO_BRANCH }} 源码
       working-directory: /${{ env.DIY_WORK }}
       run: |
         git clone -q -b "${REPO_BRANCH}" --single-branch "${REPO_URL}" openwrt
@@ -178,7 +167,7 @@ jobs:
       continue-on-error: true
       uses: ./.github/actions/message
  
-    - name: 准备 ${{ matrix.target }}-${{ inputs.REPO_BRANCH }} 自定义配置
+    - name: 准备 ${{ matrix.target }}-${{ env.REPO_BRANCH }} 自定义配置
       uses: ./.github/actions/prepare
 
     - name: SSH menuconfig
@@ -206,7 +195,7 @@ jobs:
       if: env.COMPILATION_INFORMATION == 'true'
       uses: ./.github/actions/message
 
-    - name: 触发 ${{ matrix.target }}-${{ inputs.REPO_BRANCH }} 编译
+    - name: 触发 ${{ matrix.target }}-${{ env.REPO_BRANCH }} 编译
       if: steps.info.outputs.ready == 'true'
       timeout-minutes: 5
       uses: ./.github/actions/trigger
